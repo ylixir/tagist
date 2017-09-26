@@ -2,4 +2,7 @@
 elm-stuff
 # elm-repl generated files
 repl-temp-*
-Tagist.js
+
+src
+elm-package.json
+Makefile
