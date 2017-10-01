@@ -64,24 +64,26 @@ parseAndValues filter =
     List.foldr treeMaker EmptyFilterTree (String.split "/" filter)
 
 
-extractUsers : FilterTree -> Set String
+extractUsers : FilterTree -> List String
 extractUsers filterTree =
     case filterTree of
         EmptyFilterTree ->
-            Set.empty
+            []
 
         FilterTree tree ->
-            List.foldl
-                (\filter users ->
-                    case filter of
-                        User user ->
-                            Set.insert user users
+            Set.toList <|
+                (List.foldl
+                    (\filter users ->
+                        case filter of
+                            User user ->
+                                Set.insert user users
 
-                        Tag tag ->
-                            users
+                            Tag tag ->
+                                users
+                    )
+                    (Set.fromList (extractUsers tree.andFilters))
+                    tree.orFilters
                 )
-                (extractUsers tree.andFilters)
-                tree.orFilters
 
 
 
@@ -122,7 +124,7 @@ modelFromLocation location =
 
 type alias Model =
     { error : String
-    , gists : List String
+    , gists : List (Http.Response String)
     , filters : FilterTree
     }
 
@@ -144,22 +146,46 @@ init location =
 
 type Msg
     = UrlChange Navigation.Location
-    | AppendGists (Result Http.Error String)
+    | AppendGists (Result Http.Error (Http.Response String))
+
+
+getGists : String -> Http.Request (Http.Response String)
+getGists url =
+    Http.request
+        { method = "GET"
+        , headers = [ Http.header "Accept" "application/vnd.github.v3+json" ]
+        , url = url
+        , body = Http.emptyBody
+        , expect = Http.expectStringResponse (\response -> Ok response)
+        , timeout = Nothing
+        , withCredentials = False
+        }
 
 
 requestGistsForUser : String -> Cmd Msg
 requestGistsForUser user =
-    Http.send AppendGists (Http.getString ("https://api.github.com/users/" ++ user ++ "/gists"))
+    Http.send AppendGists (getGists ("https://api.github.com/users/" ++ user ++ "/gists"))
+
+
+requestGistsForAll : Cmd Msg
+requestGistsForAll =
+    Http.send AppendGists (getGists "https://api.github.com/gists")
 
 
 requestGists : Model -> Cmd Msg
 requestGists model =
-    Cmd.batch
-        (model.filters
-            |> extractUsers
-            |> Set.toList
-            |> List.map requestGistsForUser
-        )
+    let
+        users =
+            extractUsers model.filters
+    in
+        case users of
+            [] ->
+                requestGistsForAll
+
+            _ ->
+                users
+                    |> List.map requestGistsForUser
+                    |> Cmd.batch
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -200,20 +226,16 @@ view model =
         ]
 
 
-viewGists : List String -> Html msg
+viewGists : List (Http.Response String) -> Html msg
 viewGists gists =
-    div [] <| List.map (\gist -> div [] [ text gist ]) gists
+    div [] <| List.map (\gist -> div [] [ text gist.body ]) gists
 
 
-viewUsers : Set String -> Html msg
+viewUsers : List String -> Html msg
 viewUsers users =
     div []
         [ h1 [] [ text "Users" ]
-        , ul [] <|
-            (users
-                |> Set.toList
-                |> List.map (\user -> li [] [ text user ])
-            )
+        , ul [] <| List.map (\user -> li [] [ text user ]) users
         ]
 
 
