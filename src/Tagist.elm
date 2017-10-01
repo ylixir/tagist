@@ -3,6 +3,7 @@ module Main exposing (..)
 import Html exposing (..)
 import Navigation
 import Set exposing (Set)
+import Http
 
 
 main : Program Never Model Msg
@@ -116,19 +117,25 @@ modelFromLocation location =
     location.hash
         |> parseAndValues
         |> removeEmptyLinks
-        |> Model
+        |> Model "" []
 
 
 type alias Model =
-    { filters : FilterTree
+    { error : String
+    , gists : List String
+    , filters : FilterTree
     }
 
 
 init : Navigation.Location -> ( Model, Cmd Msg )
 init location =
-    ( modelFromLocation location
-    , Cmd.none
-    )
+    let
+        newModel =
+            modelFromLocation location
+    in
+        ( newModel
+        , requestGists newModel
+        )
 
 
 
@@ -137,15 +144,43 @@ init location =
 
 type Msg
     = UrlChange Navigation.Location
+    | AppendGists (Result Http.Error String)
+
+
+requestGistsForUser : String -> Cmd Msg
+requestGistsForUser user =
+    Http.send AppendGists (Http.getString ("https://api.github.com/users/" ++ user ++ "/gists"))
+
+
+requestGists : Model -> Cmd Msg
+requestGists model =
+    Cmd.batch
+        (model.filters
+            |> extractUsers
+            |> Set.toList
+            |> List.map requestGistsForUser
+        )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         UrlChange location ->
-            ( modelFromLocation location
-            , Cmd.none
-            )
+            let
+                newModel =
+                    modelFromLocation location
+            in
+                ( newModel
+                , requestGists newModel
+                )
+
+        AppendGists result ->
+            case result of
+                Err error ->
+                    { model | error = toString error } ! []
+
+                Ok gist ->
+                    { model | gists = gist :: model.gists } ! []
 
 
 
@@ -158,7 +193,16 @@ view model =
         [ h1 [] [ text "Filter Tree" ]
         , viewTree model.filters
         , viewUsers <| extractUsers model.filters
+        , h1 [] [ text "Errors" ]
+        , div [] [ text model.error ]
+        , h1 [] [ text "Gists" ]
+        , viewGists model.gists
         ]
+
+
+viewGists : List String -> Html msg
+viewGists gists =
+    div [] <| List.map (\gist -> div [] [ text gist ]) gists
 
 
 viewUsers : Set String -> Html msg
