@@ -4,6 +4,9 @@ import Html exposing (..)
 import Navigation
 import Set exposing (Set)
 import Http
+import Json.Decode.Pipeline exposing (decode, required, optional, optionalAt)
+import Json.Decode exposing (Decoder, list, string, field, dict, nullable, maybe, decodeString)
+import Dict exposing (Dict)
 
 
 main : Program Never Model Msg
@@ -25,6 +28,42 @@ type Filter
     | Tag String
 
 
+type FilterTree
+    = FilterTree
+        { orFilters : List Filter
+        , andFilters : FilterTree
+        }
+    | EmptyFilterTree
+
+
+type alias GistSummary =
+    { owner : Maybe String
+    , description : Maybe String
+    , files : List String
+    }
+
+
+type alias Model =
+    { error : String
+    , gistResponses : List (Http.Response String)
+    , gistInfo : List GistSummary
+    , filters : FilterTree
+    }
+
+
+fileDecoder : Decoder (List String)
+fileDecoder =
+    (dict <| field "filename" string) |> Json.Decode.andThen (\dict -> decode (Dict.values dict))
+
+
+infoDecoder : Decoder GistSummary
+infoDecoder =
+    decode GistSummary
+        |> optionalAt [ "owner", "login" ] (maybe string) Nothing
+        |> required "description" (nullable string)
+        |> required "files" fileDecoder
+
+
 categorizeFilters : String -> Maybe Filter
 categorizeFilters filter =
     case String.uncons filter of
@@ -39,14 +78,6 @@ categorizeFilters filter =
 
         Nothing ->
             Nothing
-
-
-type FilterTree
-    = FilterTree
-        { orFilters : List Filter
-        , andFilters : FilterTree
-        }
-    | EmptyFilterTree
 
 
 parseOrValues : String -> List Filter
@@ -119,14 +150,7 @@ modelFromLocation location =
     location.hash
         |> parseAndValues
         |> removeEmptyLinks
-        |> Model "" []
-
-
-type alias Model =
-    { error : String
-    , gists : List (Http.Response String)
-    , filters : FilterTree
-    }
+        |> Model "" [] []
 
 
 init : Navigation.Location -> ( Model, Cmd Msg )
@@ -206,7 +230,12 @@ update msg model =
                     { model | error = toString error } ! []
 
                 Ok gist ->
-                    { model | gists = gist :: model.gists } ! []
+                    { model
+                        | gistInfo =
+                            Result.withDefault [] (decodeString (list infoDecoder) gist.body)
+                        , gistResponses = gist :: model.gistResponses
+                    }
+                        ! []
 
 
 
@@ -222,13 +251,23 @@ view model =
         , h1 [] [ text "Errors" ]
         , div [] [ text model.error ]
         , h1 [] [ text "Gists" ]
-        , viewGists model.gists
+        , viewGists model.gistInfo
         ]
 
 
-viewGists : List (Http.Response String) -> Html msg
+viewGist : GistSummary -> Html msg
+viewGist gist =
+    div []
+        [ div [] [ text <| "Owner " ++ (Maybe.withDefault "Anonymous" gist.owner) ]
+        , div [] [ text <| "Description: " ++ (Maybe.withDefault "" gist.description) ]
+        , div [] [ text "Files" ]
+        , ul [] <| List.map (\file -> li [] [ text file ]) gist.files
+        ]
+
+
+viewGists : List GistSummary -> Html msg
 viewGists gists =
-    div [] <| List.map (\gist -> div [] [ text gist.body ]) gists
+    div [] <| List.map viewGist gists
 
 
 viewUsers : List String -> Html msg
