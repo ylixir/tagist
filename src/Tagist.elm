@@ -4,7 +4,7 @@ import Html exposing (..)
 import Navigation
 import Set exposing (Set)
 import Http
-import Json.Decode.Pipeline exposing (decode, required, optional, optionalAt)
+import Json.Decode.Pipeline exposing (decode, required, optional, optionalAt, hardcoded)
 import Json.Decode exposing (Decoder, list, string, field, dict, nullable, maybe, decodeString)
 import Dict exposing (Dict)
 
@@ -28,6 +28,16 @@ type Filter
     | Tag String
 
 
+type FileType
+    = PlainText
+    | UnknownType
+
+
+type ComputerLanguage
+    = Markdown
+    | UnknownLanguage
+
+
 type FilterTree
     = FilterTree
         { orFilters : List Filter
@@ -36,10 +46,20 @@ type FilterTree
     | EmptyFilterTree
 
 
+type alias FileData =
+    { name : String
+    , rawUrl : String
+    , fileType : FileType
+    , language : ComputerLanguage
+    , contents : Maybe String
+    }
+
+
 type alias GistSummary =
-    { owner : Maybe String
+    { id : String
+    , owner : Maybe String
     , description : Maybe String
-    , files : List String
+    , files : List FileData
     }
 
 
@@ -51,14 +71,43 @@ type alias Model =
     }
 
 
-fileDecoder : Decoder (List String)
+fileTypeDecoder fileType =
+    case fileType of
+        "text/plain" ->
+            decode PlainText
+
+        _ ->
+            decode UnknownType
+
+
+languageDecoder language =
+    case language of
+        "Markdown" ->
+            decode Markdown
+
+        _ ->
+            decode UnknownLanguage
+
+
+fileInfoDecoder : Decoder FileData
+fileInfoDecoder =
+    decode FileData
+        |> required "filename" string
+        |> required "raw_url" string
+        |> required "type" (string |> Json.Decode.andThen fileTypeDecoder)
+        |> optional "language" (string |> Json.Decode.andThen languageDecoder) UnknownLanguage
+        |> hardcoded Nothing
+
+
+fileDecoder : Decoder (List FileData)
 fileDecoder =
-    (dict <| field "filename" string) |> Json.Decode.andThen (\dict -> decode (Dict.values dict))
+    (dict <| fileInfoDecoder) |> Json.Decode.andThen (\dict -> decode (Dict.values dict))
 
 
 infoDecoder : Decoder GistSummary
 infoDecoder =
     decode GistSummary
+        |> required "id" string
         |> optionalAt [ "owner", "login" ] (maybe string) Nothing
         |> required "description" (nullable string)
         |> required "files" fileDecoder
@@ -168,9 +217,17 @@ init location =
 -- UPDATE
 
 
+type alias FileCoordinates =
+    { gistId : String
+    , fileName : String
+    }
+
+
 type Msg
     = UrlChange Navigation.Location
     | AppendGists (Result Http.Error (Http.Response String))
+    | RequestFileContents FileCoordinates
+    | ReceiveFileContents FileCoordinates (Result Http.Error (Http.Response String))
 
 
 getGists : String -> Http.Request (Http.Response String)
@@ -212,6 +269,22 @@ requestGists model =
                     |> Cmd.batch
 
 
+updateFileWithData : FileCoordinates -> String -> FileData -> FileData
+updateFileWithData fileCoords data file =
+    if fileCoords.fileName == file.name then
+        { file | contents = Just data }
+    else
+        file
+
+
+updateGistWithFileData : FileCoordinates -> String -> GistSummary -> GistSummary
+updateGistWithFileData fileCoords data gist =
+    if fileCoords.gistId == gist.id then
+        { gist | files = List.map (updateFileWithData fileCoords data) gist.files }
+    else
+        gist
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -237,6 +310,17 @@ update msg model =
                     }
                         ! []
 
+        ReceiveFileContents fileCoords result ->
+            case result of
+                Err error ->
+                    { model | error = toString error } ! []
+
+                Ok data ->
+                    { model | gistInfo = List.map (updateGistWithFileData fileCoords data.body) model.gistInfo } ! []
+
+        RequestFileContents fileCoords ->
+            model ! []
+
 
 
 -- VIEW
@@ -261,7 +345,7 @@ viewGist gist =
         [ div [] [ text <| "Owner " ++ (Maybe.withDefault "Anonymous" gist.owner) ]
         , div [] [ text <| "Description: " ++ (Maybe.withDefault "" gist.description) ]
         , div [] [ text "Files" ]
-        , ul [] <| List.map (\file -> li [] [ text file ]) gist.files
+        , ul [] <| List.map (\file -> li [] [ text file.name ]) gist.files
         ]
 
 
