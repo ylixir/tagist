@@ -10641,12 +10641,20 @@ var _ylixir$tagist$Main$update = F2(
 						{ctor: '[]'});
 				}
 			case 'RequestFileContents':
+				var _p15 = _p13._0;
 				return {
 					ctor: '_Tuple2',
-					_0: model,
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{
+							gistInfo: A2(
+								_elm_lang$core$List$map,
+								A2(_ylixir$tagist$Main$updateGistWithFileData, _p15, _ylixir$tagist$Main$Loading),
+								model.gistInfo)
+						}),
 					_1: A2(
 						_elm_lang$http$Http$send,
-						_ylixir$tagist$Main$ReceiveFileContents(_p13._0),
+						_ylixir$tagist$Main$ReceiveFileContents(_p15),
 						_elm_lang$http$Http$getString(_p13._1))
 				};
 			default:
@@ -10673,7 +10681,7 @@ var _ylixir$tagist$Main$main = A2(
 		init: _ylixir$tagist$Main$init,
 		view: _ylixir$tagist$Main$view,
 		update: _ylixir$tagist$Main$update,
-		subscriptions: function (_p15) {
+		subscriptions: function (_p16) {
 			return _elm_lang$core$Platform_Sub$none;
 		}
 	})();
