@@ -80,7 +80,7 @@ type alias GistSummary =
 
 
 type alias Model =
-    { error : String
+    { error : Maybe String
     , gistResponses :
         List (Http.Response String)
         --the responses are more or less just for debugging, they shouldn't be needed really
@@ -222,7 +222,7 @@ modelFromLocation location =
     location.hash
         |> parseAndValues
         |> removeEmptyLinks
-        |> Model "" [] []
+        |> Model Nothing [] []
 
 
 init : Navigation.Location -> ( Model, Cmd Msg )
@@ -322,7 +322,7 @@ update msg model =
                 )
 
         AppendGists (Err error) ->
-            { model | error = toString error } ! []
+            { model | error = Just (toString error) } ! []
 
         AppendGists (Ok gist) ->
             { model
@@ -333,7 +333,7 @@ update msg model =
                 ! []
 
         ReceiveFileContents fileCoords (Err error) ->
-            { model | error = toString error } ! []
+            { model | gistInfo = List.map (updateGistWithFileData fileCoords (Error (toString error))) model.gistInfo } ! []
 
         ReceiveFileContents fileCoords (Ok data) ->
             { model | gistInfo = List.map (updateGistWithFileData fileCoords (Loaded data)) model.gistInfo } ! []
@@ -351,15 +351,19 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ h1 [] [ text "Filter Tree" ]
-        , viewTree model.filters
-        , viewUsers <| extractUsers model.filters
-        , h1 [] [ text "Errors" ]
-        , div [] [ text model.error ]
-        , h1 [] [ text "Gists" ]
-        , viewGists model.gistInfo
-        ]
+    div [] <|
+        (case model.error of
+            Just error ->
+                [ h1 [] [ text "Errors" ]
+                , div [] [ text error ]
+                ]
+
+            Nothing ->
+                []
+        )
+            ++ [ h1 [] [ text "Gists" ]
+               , viewGists model.gistInfo
+               ]
 
 
 fileLink : FileData -> Html msg
@@ -434,9 +438,8 @@ viewFile gistId file =
 viewGist : GistSummary -> Html Msg
 viewGist gist =
     div []
-        [ div [] [ text <| "Owner " ++ (Maybe.withDefault "Anonymous" gist.owner) ]
-        , div [] [ text <| "Description: " ++ (Maybe.withDefault "" gist.description) ]
-        , div [] [ text "Files" ]
+        [ h2 [] [ text <| Maybe.withDefault "Untitled" gist.description ]
+        , h3 [] [ text <| Maybe.withDefault "Anonymous" gist.owner ]
         , div [] <| List.map (viewFile gist.id) gist.files
         ]
 
@@ -444,37 +447,3 @@ viewGist gist =
 viewGists : List GistSummary -> Html Msg
 viewGists gists =
     div [] <| List.map viewGist gists
-
-
-viewUsers : List String -> Html msg
-viewUsers users =
-    div []
-        [ h1 [] [ text "Users" ]
-        , ul [] <| List.map (\user -> li [] [ text user ]) users
-        ]
-
-
-viewFilterItem : Filter -> Html msg
-viewFilterItem item =
-    case item of
-        User string ->
-            li [] [ text <| "User: " ++ string ]
-
-        Tag string ->
-            li [] [ text <| "Tag: " ++ string ]
-
-
-viewTree : FilterTree -> Html msg
-viewTree filterTree =
-    case filterTree of
-        FilterTree tree ->
-            div []
-                [ h2 [] [ text "Or" ]
-                , ul []
-                    ((li [] [ h2 [] [ text "And" ], ul [] [ viewTree tree.andFilters ] ])
-                        :: (List.map viewFilterItem tree.orFilters)
-                    )
-                ]
-
-        EmptyFilterTree ->
-            div [] []
