@@ -10284,7 +10284,11 @@ var _ylixir$tagist$Main$viewFile = F2(
 								_0: A2(
 									_elm_lang$html$Html$span,
 									{ctor: '[]'},
-									{ctor: '[]'}),
+									{
+										ctor: '::',
+										_0: _elm_lang$html$Html$text('[ ]'),
+										_1: {ctor: '[]'}
+									}),
 								_1: {
 									ctor: '::',
 									_0: _ylixir$tagist$Main$fileLink(file),
@@ -10294,7 +10298,7 @@ var _ylixir$tagist$Main$viewFile = F2(
 						} else {
 							return {
 								ctor: '::',
-								_0: A2(knownLanguage, getContents, '+'),
+								_0: A2(knownLanguage, getContents, '[+]'),
 								_1: {
 									ctor: '::',
 									_0: _ylixir$tagist$Main$fileLink(file),
@@ -10305,7 +10309,7 @@ var _ylixir$tagist$Main$viewFile = F2(
 					case 'Loading':
 						return {
 							ctor: '::',
-							_0: A2(knownLanguage, getContents, '−'),
+							_0: A2(knownLanguage, getContents, '[−]'),
 							_1: {
 								ctor: '::',
 								_0: _ylixir$tagist$Main$fileLink(file),
@@ -10328,7 +10332,7 @@ var _ylixir$tagist$Main$viewFile = F2(
 							case 'Markdown':
 								return {
 									ctor: '::',
-									_0: A2(knownLanguage, removeContents, '−'),
+									_0: A2(knownLanguage, removeContents, '[−]'),
 									_1: {
 										ctor: '::',
 										_0: _ylixir$tagist$Main$fileLink(file),
@@ -10352,7 +10356,7 @@ var _ylixir$tagist$Main$viewFile = F2(
 							case 'Text':
 								return {
 									ctor: '::',
-									_0: A2(knownLanguage, removeContents, '−'),
+									_0: A2(knownLanguage, removeContents, '[−]'),
 									_1: {
 										ctor: '::',
 										_0: _ylixir$tagist$Main$fileLink(file),
@@ -10387,7 +10391,7 @@ var _ylixir$tagist$Main$viewFile = F2(
 							default:
 								return {
 									ctor: '::',
-									_0: A2(knownLanguage, removeContents, '−'),
+									_0: A2(knownLanguage, removeContents, '[−]'),
 									_1: {
 										ctor: '::',
 										_0: _ylixir$tagist$Main$fileLink(file),
@@ -10409,7 +10413,7 @@ var _ylixir$tagist$Main$viewFile = F2(
 					default:
 						return {
 							ctor: '::',
-							_0: A2(knownLanguage, getContents, '↻'),
+							_0: A2(knownLanguage, getContents, '[↻]'),
 							_1: {
 								ctor: '::',
 								_0: _ylixir$tagist$Main$fileLink(file),
