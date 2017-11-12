@@ -395,41 +395,41 @@ viewFile gistId file =
         div [] <|
             case ( file.contents, file.language ) of
                 ( Unloaded, UnknownLanguage ) ->
-                    [ span [] []
+                    [ span [] [ text "[ ]" ]
                     , fileLink file
                     ]
 
                 ( Unloaded, _ ) ->
-                    [ knownLanguage getContents "+"
+                    [ knownLanguage getContents "[+]"
                     , fileLink file
                     ]
 
                 ( Loading, _ ) ->
-                    [ knownLanguage getContents "−"
+                    [ knownLanguage getContents "[−]"
                     , fileLink file
                     , div [] [ text "Loading..." ]
                     ]
 
                 ( Loaded data, Markdown ) ->
-                    [ knownLanguage removeContents "−"
+                    [ knownLanguage removeContents "[−]"
                     , fileLink file
                     , div [] [ Markdown.toHtml [] data ]
                     ]
 
                 ( Loaded data, Text ) ->
-                    [ knownLanguage removeContents "−"
+                    [ knownLanguage removeContents "[−]"
                     , fileLink file
                     , div [] [ pre [] [ code [] [ text data ] ] ]
                     ]
 
                 ( Loaded data, _ ) ->
-                    [ knownLanguage removeContents "−"
+                    [ knownLanguage removeContents "[−]"
                     , fileLink file
                     , div [] [ text data ]
                     ]
 
                 ( Error message, _ ) ->
-                    [ knownLanguage getContents "↻"
+                    [ knownLanguage getContents "[↻]"
                     , fileLink file
                     , div [] [ text message ]
                     ]
