@@ -1,12 +1,15 @@
 module Main exposing (..)
 
 import Html exposing (..)
+import Html.Attributes exposing (href)
+import Html.Events exposing (onClick)
 import Navigation
 import Set exposing (Set)
 import Http
 import Json.Decode.Pipeline exposing (decode, required, optional, optionalAt, hardcoded)
 import Json.Decode exposing (Decoder, list, string, field, dict, nullable, maybe, decodeString)
 import Dict exposing (Dict)
+import Markdown
 
 
 main : Program Never Model Msg
@@ -21,6 +24,7 @@ main =
 
 
 -- MODEL
+--these are the models for the url/filters
 
 
 type Filter
@@ -33,11 +37,6 @@ type FileType
     | UnknownType
 
 
-type ComputerLanguage
-    = Markdown
-    | UnknownLanguage
-
-
 type FilterTree
     = FilterTree
         { orFilters : List Filter
@@ -46,12 +45,29 @@ type FilterTree
     | EmptyFilterTree
 
 
+
+--these are the data structures for the gists themselves
+
+
+type ComputerLanguage
+    = Markdown
+    | Text
+    | UnknownLanguage
+
+
+type FileContents
+    = Unloaded
+    | Loading
+    | Loaded String
+    | Error String
+
+
 type alias FileData =
     { name : String
     , rawUrl : String
     , fileType : FileType
     , language : ComputerLanguage
-    , contents : Maybe String
+    , contents : FileContents
     }
 
 
@@ -65,12 +81,15 @@ type alias GistSummary =
 
 type alias Model =
     { error : String
-    , gistResponses : List (Http.Response String)
+    , gistResponses :
+        List (Http.Response String)
+        --the responses are more or less just for debugging, they shouldn't be needed really
     , gistInfo : List GistSummary
     , filters : FilterTree
     }
 
 
+fileTypeDecoder : String -> Decoder FileType
 fileTypeDecoder fileType =
     case fileType of
         "text/plain" ->
@@ -80,10 +99,14 @@ fileTypeDecoder fileType =
             decode UnknownType
 
 
+languageDecoder : String -> Decoder ComputerLanguage
 languageDecoder language =
     case language of
         "Markdown" ->
             decode Markdown
+
+        "Text" ->
+            decode Text
 
         _ ->
             decode UnknownLanguage
@@ -96,7 +119,7 @@ fileInfoDecoder =
         |> required "raw_url" string
         |> required "type" (string |> Json.Decode.andThen fileTypeDecoder)
         |> optional "language" (string |> Json.Decode.andThen languageDecoder) UnknownLanguage
-        |> hardcoded Nothing
+        |> hardcoded Unloaded
 
 
 fileDecoder : Decoder (List FileData)
@@ -226,8 +249,9 @@ type alias FileCoordinates =
 type Msg
     = UrlChange Navigation.Location
     | AppendGists (Result Http.Error (Http.Response String))
-    | RequestFileContents FileCoordinates
-    | ReceiveFileContents FileCoordinates (Result Http.Error (Http.Response String))
+    | RequestFileContents FileCoordinates String
+    | ReceiveFileContents FileCoordinates (Result Http.Error String)
+    | RemoveFileContents FileCoordinates
 
 
 getGists : String -> Http.Request (Http.Response String)
@@ -269,15 +293,15 @@ requestGists model =
                     |> Cmd.batch
 
 
-updateFileWithData : FileCoordinates -> String -> FileData -> FileData
+updateFileWithData : FileCoordinates -> FileContents -> FileData -> FileData
 updateFileWithData fileCoords data file =
     if fileCoords.fileName == file.name then
-        { file | contents = Just data }
+        { file | contents = data }
     else
         file
 
 
-updateGistWithFileData : FileCoordinates -> String -> GistSummary -> GistSummary
+updateGistWithFileData : FileCoordinates -> FileContents -> GistSummary -> GistSummary
 updateGistWithFileData fileCoords data gist =
     if fileCoords.gistId == gist.id then
         { gist | files = List.map (updateFileWithData fileCoords data) gist.files }
@@ -297,36 +321,35 @@ update msg model =
                 , requestGists newModel
                 )
 
-        AppendGists result ->
-            case result of
-                Err error ->
-                    { model | error = toString error } ! []
+        AppendGists (Err error) ->
+            { model | error = toString error } ! []
 
-                Ok gist ->
-                    { model
-                        | gistInfo =
-                            Result.withDefault [] (decodeString (list infoDecoder) gist.body)
-                        , gistResponses = gist :: model.gistResponses
-                    }
-                        ! []
+        AppendGists (Ok gist) ->
+            { model
+                | gistInfo =
+                    model.gistInfo ++ Result.withDefault [] (decodeString (list infoDecoder) gist.body)
+                , gistResponses = gist :: model.gistResponses
+            }
+                ! []
 
-        ReceiveFileContents fileCoords result ->
-            case result of
-                Err error ->
-                    { model | error = toString error } ! []
+        ReceiveFileContents fileCoords (Err error) ->
+            { model | error = toString error } ! []
 
-                Ok data ->
-                    { model | gistInfo = List.map (updateGistWithFileData fileCoords data.body) model.gistInfo } ! []
+        ReceiveFileContents fileCoords (Ok data) ->
+            { model | gistInfo = List.map (updateGistWithFileData fileCoords (Loaded data)) model.gistInfo } ! []
 
-        RequestFileContents fileCoords ->
-            model ! []
+        RequestFileContents fileCoords url ->
+            ( model, Http.send (ReceiveFileContents fileCoords) (Http.getString url) )
+
+        RemoveFileContents fileCoords ->
+            { model | gistInfo = List.map (updateGistWithFileData fileCoords Unloaded) model.gistInfo } ! []
 
 
 
 -- VIEW
 
 
-view : Model -> Html msg
+view : Model -> Html Msg
 view model =
     div []
         [ h1 [] [ text "Filter Tree" ]
@@ -339,17 +362,86 @@ view model =
         ]
 
 
-viewGist : GistSummary -> Html msg
+fileLink : FileData -> Html msg
+fileLink f =
+    a [ href f.rawUrl ] [ text f.name ]
+
+
+viewFile : String -> FileData -> Html Msg
+viewFile gistId file =
+    let
+        knownLanguage action bullet =
+            case file.language of
+                UnknownLanguage ->
+                    span [] []
+
+                _ ->
+                    span [ action ] [ text bullet ]
+
+        getContents =
+            file.rawUrl
+                |> RequestFileContents (FileCoordinates gistId file.name)
+                |> onClick
+
+        removeContents =
+            FileCoordinates gistId file.name
+                |> RemoveFileContents
+                |> onClick
+    in
+        div [] <|
+            case ( file.contents, file.language ) of
+                ( Unloaded, UnknownLanguage ) ->
+                    [ span [] []
+                    , fileLink file
+                    ]
+
+                ( Unloaded, _ ) ->
+                    [ knownLanguage getContents "+"
+                    , fileLink file
+                    ]
+
+                ( Loading, _ ) ->
+                    [ knownLanguage getContents "−"
+                    , fileLink file
+                    , div [] [ text "Loading..." ]
+                    ]
+
+                ( Loaded data, Markdown ) ->
+                    [ knownLanguage removeContents "−"
+                    , fileLink file
+                    , div [] [ Markdown.toHtml [] data ]
+                    ]
+
+                ( Loaded data, Text ) ->
+                    [ knownLanguage removeContents "−"
+                    , fileLink file
+                    , div [] [ pre [] [ code [] [ text data ] ] ]
+                    ]
+
+                ( Loaded data, _ ) ->
+                    [ knownLanguage removeContents "−"
+                    , fileLink file
+                    , div [] [ text data ]
+                    ]
+
+                ( Error message, _ ) ->
+                    [ knownLanguage getContents "↻"
+                    , fileLink file
+                    , div [] [ text message ]
+                    ]
+
+
+viewGist : GistSummary -> Html Msg
 viewGist gist =
     div []
         [ div [] [ text <| "Owner " ++ (Maybe.withDefault "Anonymous" gist.owner) ]
         , div [] [ text <| "Description: " ++ (Maybe.withDefault "" gist.description) ]
         , div [] [ text "Files" ]
-        , ul [] <| List.map (\file -> li [] [ text file.name ]) gist.files
+        , div [] <| List.map (viewFile gist.id) gist.files
         ]
 
 
-viewGists : List GistSummary -> Html msg
+viewGists : List GistSummary -> Html Msg
 viewGists gists =
     div [] <| List.map viewGist gists
 
