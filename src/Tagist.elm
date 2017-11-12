@@ -217,6 +217,63 @@ removeEmptyLinks filterTree =
             EmptyFilterTree
 
 
+tagFilters : List Filter -> List String
+tagFilters =
+    List.foldl
+        (\f a ->
+            case f of
+                User s ->
+                    a
+
+                Tag s ->
+                    s :: a
+        )
+        []
+
+
+filterGistByTags : List Filter -> Maybe GistSummary -> Maybe GistSummary
+filterGistByTags orFilters gist =
+    case ( tagFilters orFilters, gist ) of
+        ( [], _ ) ->
+            --empty filters match all the things
+            gist
+
+        ( filters, Nothing ) ->
+            Nothing
+
+        ( filters, Just g ) ->
+            case
+                List.foldl
+                    (\f a ->
+                        a
+                            || (case g.description of
+                                    Nothing ->
+                                        False
+
+                                    Just d ->
+                                        String.contains (String.toLower f) (String.toLower d)
+                               )
+                    )
+                    False
+                    filters
+            of
+                True ->
+                    gist
+
+                False ->
+                    Nothing
+
+
+filterGistByTree : FilterTree -> GistSummary -> Maybe GistSummary
+filterGistByTree tree gist =
+    case tree of
+        EmptyFilterTree ->
+            Just gist
+
+        FilterTree tree ->
+            filterGistByTags tree.orFilters (filterGistByTree tree.andFilters gist)
+
+
 modelFromLocation : Navigation.Location -> Model
 modelFromLocation location =
     location.hash
@@ -279,18 +336,14 @@ requestGistsForAll =
 
 requestGists : Model -> Cmd Msg
 requestGists model =
-    let
-        users =
-            extractUsers model.filters
-    in
-        case users of
-            [] ->
-                requestGistsForAll
+    case (extractUsers model.filters) of
+        [] ->
+            requestGistsForAll
 
-            _ ->
-                users
-                    |> List.map requestGistsForUser
-                    |> Cmd.batch
+        users ->
+            users
+                |> List.map requestGistsForUser
+                |> Cmd.batch
 
 
 updateFileWithData : FileCoordinates -> FileContents -> FileData -> FileData
@@ -327,7 +380,7 @@ update msg model =
         AppendGists (Ok gist) ->
             { model
                 | gistInfo =
-                    model.gistInfo ++ Result.withDefault [] (decodeString (list infoDecoder) gist.body)
+                    model.gistInfo ++ (List.filterMap (filterGistByTree model.filters) <| Result.withDefault [] (decodeString (list infoDecoder) gist.body))
                 , gistResponses = gist :: model.gistResponses
             }
                 ! []
