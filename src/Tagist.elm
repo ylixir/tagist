@@ -339,7 +339,7 @@ update msg model =
             { model | gistInfo = List.map (updateGistWithFileData fileCoords (Loaded data)) model.gistInfo } ! []
 
         RequestFileContents fileCoords url ->
-            ( model, Http.send (ReceiveFileContents fileCoords) (Http.getString url) )
+            ( { model | gistInfo = List.map (updateGistWithFileData fileCoords Loading) model.gistInfo }, Http.send (ReceiveFileContents fileCoords) (Http.getString url) )
 
         RemoveFileContents fileCoords ->
             { model | gistInfo = List.map (updateGistWithFileData fileCoords Unloaded) model.gistInfo } ! []
