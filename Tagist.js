@@ -10026,27 +10026,99 @@ var _ylixir$tagist$Main$getGists = function (url) {
 			withCredentials: false
 		});
 };
+var _ylixir$tagist$Main$tagFilters = A2(
+	_elm_lang$core$List$foldl,
+	F2(
+		function (f, a) {
+			var _p0 = f;
+			if (_p0.ctor === 'User') {
+				return a;
+			} else {
+				return {ctor: '::', _0: _p0._0, _1: a};
+			}
+		}),
+	{ctor: '[]'});
+var _ylixir$tagist$Main$filterGistByTags = F2(
+	function (orFilters, gist) {
+		var _p1 = {
+			ctor: '_Tuple2',
+			_0: _ylixir$tagist$Main$tagFilters(orFilters),
+			_1: gist
+		};
+		_v1_0:
+		do {
+			if (_p1._1.ctor === 'Nothing') {
+				if (_p1._0.ctor === '[]') {
+					break _v1_0;
+				} else {
+					return _elm_lang$core$Maybe$Nothing;
+				}
+			} else {
+				if (_p1._0.ctor === '[]') {
+					break _v1_0;
+				} else {
+					var _p3 = A3(
+						_elm_lang$core$List$foldl,
+						F2(
+							function (f, a) {
+								return a || function () {
+									var _p2 = _p1._1._0.description;
+									if (_p2.ctor === 'Nothing') {
+										return false;
+									} else {
+										return A2(
+											_elm_lang$core$String$contains,
+											_elm_lang$core$String$toLower(f),
+											_elm_lang$core$String$toLower(_p2._0));
+									}
+								}();
+							}),
+						false,
+						_p1._0);
+					if (_p3 === true) {
+						return gist;
+					} else {
+						return _elm_lang$core$Maybe$Nothing;
+					}
+				}
+			}
+		} while(false);
+		return gist;
+	});
+var _ylixir$tagist$Main$filterGistByTree = F2(
+	function (tree, gist) {
+		var _p4 = tree;
+		if (_p4.ctor === 'EmptyFilterTree') {
+			return _elm_lang$core$Maybe$Just(gist);
+		} else {
+			var _p5 = _p4._0;
+			return A2(
+				_ylixir$tagist$Main$filterGistByTags,
+				_p5.orFilters,
+				A2(_ylixir$tagist$Main$filterGistByTree, _p5.andFilters, gist));
+		}
+	});
 var _ylixir$tagist$Main$extractUsers = function (filterTree) {
-	var _p0 = filterTree;
-	if (_p0.ctor === 'EmptyFilterTree') {
+	var _p6 = filterTree;
+	if (_p6.ctor === 'EmptyFilterTree') {
 		return {ctor: '[]'};
 	} else {
-		var _p2 = _p0._0;
+		var _p8 = _p6._0;
 		return _elm_lang$core$Set$toList(
 			A3(
 				_elm_lang$core$List$foldl,
 				F2(
 					function (filter, users) {
-						var _p1 = filter;
-						if (_p1.ctor === 'User') {
-							return A2(_elm_lang$core$Set$insert, _p1._0, users);
+						var _p7 = filter;
+						if (_p7.ctor === 'User') {
+							return A2(_elm_lang$core$Set$insert, _p7._0, users);
 						} else {
 							return users;
 						}
 					}),
 				_elm_lang$core$Set$fromList(
-					_ylixir$tagist$Main$extractUsers(_p2.andFilters)),
-				_p2.orFilters));
+					_ylixir$tagist$Main$extractUsers(_p8.andFilters)),
+				_p8.orFilters));
 	}
 };
 var _ylixir$tagist$Main$FileData = F5(
@@ -10072,14 +10144,14 @@ var _ylixir$tagist$Main$User = function (a) {
 	return {ctor: 'User', _0: a};
 };
 var _ylixir$tagist$Main$categorizeFilters = function (filter) {
-	var _p3 = _elm_lang$core$String$uncons(filter);
-	if (_p3.ctor === 'Just') {
-		if (_p3._0._0.valueOf() === '#') {
-			if (_p3._0._1 === '') {
+	var _p9 = _elm_lang$core$String$uncons(filter);
+	if (_p9.ctor === 'Just') {
+		if (_p9._0._0.valueOf() === '#') {
+			if (_p9._0._1 === '') {
 				return _elm_lang$core$Maybe$Nothing;
 			} else {
 				return _elm_lang$core$Maybe$Just(
-					_ylixir$tagist$Main$User(_p3._0._1));
+					_ylixir$tagist$Main$User(_p9._0._1));
 			}
 		} else {
 			return _elm_lang$core$Maybe$Just(
@@ -10098,8 +10170,8 @@ var _ylixir$tagist$Main$parseOrValues = function (filter) {
 var _ylixir$tagist$Main$UnknownType = {ctor: 'UnknownType'};
 var _ylixir$tagist$Main$PlainText = {ctor: 'PlainText'};
 var _ylixir$tagist$Main$fileTypeDecoder = function (fileType) {
-	var _p4 = fileType;
-	if (_p4 === 'text/plain') {
+	var _p10 = fileType;
+	if (_p10 === 'text/plain') {
 		return _NoRedInk$elm_decode_pipeline$Json_Decode_Pipeline$decode(_ylixir$tagist$Main$PlainText);
 	} else {
 		return _NoRedInk$elm_decode_pipeline$Json_Decode_Pipeline$decode(_ylixir$tagist$Main$UnknownType);
@@ -10125,17 +10197,17 @@ var _ylixir$tagist$Main$parseAndValues = function (filter) {
 		A2(_elm_lang$core$String$split, '/', filter));
 };
 var _ylixir$tagist$Main$removeEmptyLinks = function (filterTree) {
-	var _p5 = filterTree;
-	if (_p5.ctor === 'FilterTree') {
-		var _p7 = _p5._0;
-		var cleanAndFilters = _ylixir$tagist$Main$removeEmptyLinks(_p7.andFilters);
-		var _p6 = _p7.orFilters;
-		if (_p6.ctor === '[]') {
+	var _p11 = filterTree;
+	if (_p11.ctor === 'FilterTree') {
+		var _p13 = _p11._0;
+		var cleanAndFilters = _ylixir$tagist$Main$removeEmptyLinks(_p13.andFilters);
+		var _p12 = _p13.orFilters;
+		if (_p12.ctor === '[]') {
 			return cleanAndFilters;
 		} else {
 			return _ylixir$tagist$Main$FilterTree(
 				_elm_lang$core$Native_Utils.update(
-					_p7,
+					_p13,
 					{andFilters: cleanAndFilters}));
 		}
 	} else {
@@ -10155,8 +10227,8 @@ var _ylixir$tagist$Main$UnknownLanguage = {ctor: 'UnknownLanguage'};
 var _ylixir$tagist$Main$Text = {ctor: 'Text'};
 var _ylixir$tagist$Main$Markdown = {ctor: 'Markdown'};
 var _ylixir$tagist$Main$languageDecoder = function (language) {
-	var _p8 = language;
-	switch (_p8) {
+	var _p14 = language;
+	switch (_p14) {
 		case 'Markdown':
 			return _NoRedInk$elm_decode_pipeline$Json_Decode_Pipeline$decode(_ylixir$tagist$Main$Markdown);
 		case 'Text':
@@ -10250,8 +10322,8 @@ var _ylixir$tagist$Main$viewFile = F2(
 				file.rawUrl));
 		var knownLanguage = F2(
 			function (action, bullet) {
-				var _p9 = file.language;
-				if (_p9.ctor === 'UnknownLanguage') {
+				var _p15 = file.language;
+				if (_p15.ctor === 'UnknownLanguage') {
 					return A2(
 						_elm_lang$html$Html$span,
 						{ctor: '[]'},
@@ -10275,10 +10347,10 @@ var _ylixir$tagist$Main$viewFile = F2(
 			_elm_lang$html$Html$div,
 			{ctor: '[]'},
 			function () {
-				var _p10 = {ctor: '_Tuple2', _0: file.contents, _1: file.language};
-				switch (_p10._0.ctor) {
+				var _p16 = {ctor: '_Tuple2', _0: file.contents, _1: file.language};
+				switch (_p16._0.ctor) {
 					case 'Unloaded':
-						if (_p10._1.ctor === 'UnknownLanguage') {
+						if (_p16._1.ctor === 'UnknownLanguage') {
 							return {
 								ctor: '::',
 								_0: A2(
@@ -10328,7 +10400,7 @@ var _ylixir$tagist$Main$viewFile = F2(
 							}
 						};
 					case 'Loaded':
-						switch (_p10._1.ctor) {
+						switch (_p16._1.ctor) {
 							case 'Markdown':
 								return {
 									ctor: '::',
@@ -10346,7 +10418,7 @@ var _ylixir$tagist$Main$viewFile = F2(
 													_0: A2(
 														_evancz$elm_markdown$Markdown$toHtml,
 														{ctor: '[]'},
-														_p10._0._0),
+														_p16._0._0),
 													_1: {ctor: '[]'}
 												}),
 											_1: {ctor: '[]'}
@@ -10377,7 +10449,7 @@ var _ylixir$tagist$Main$viewFile = F2(
 																{ctor: '[]'},
 																{
 																	ctor: '::',
-																	_0: _elm_lang$html$Html$text(_p10._0._0),
+																	_0: _elm_lang$html$Html$text(_p16._0._0),
 																	_1: {ctor: '[]'}
 																}),
 															_1: {ctor: '[]'}
@@ -10402,7 +10474,7 @@ var _ylixir$tagist$Main$viewFile = F2(
 												{ctor: '[]'},
 												{
 													ctor: '::',
-													_0: _elm_lang$html$Html$text(_p10._0._0),
+													_0: _elm_lang$html$Html$text(_p16._0._0),
 													_1: {ctor: '[]'}
 												}),
 											_1: {ctor: '[]'}
@@ -10424,7 +10496,7 @@ var _ylixir$tagist$Main$viewFile = F2(
 										{ctor: '[]'},
 										{
 											ctor: '::',
-											_0: _elm_lang$html$Html$text(_p10._0._0),
+											_0: _elm_lang$html$Html$text(_p16._0._0),
 											_1: {ctor: '[]'}
 										}),
 									_1: {ctor: '[]'}
@@ -10487,8 +10559,8 @@ var _ylixir$tagist$Main$view = function (model) {
 		A2(
 			_elm_lang$core$Basics_ops['++'],
 			function () {
-				var _p11 = model.error;
-				if (_p11.ctor === 'Just') {
+				var _p17 = model.error;
+				if (_p17.ctor === 'Just') {
 					return {
 						ctor: '::',
 						_0: A2(
@@ -10506,7 +10578,7 @@ var _ylixir$tagist$Main$view = function (model) {
 								{ctor: '[]'},
 								{
 									ctor: '::',
-									_0: _elm_lang$html$Html$text(_p11._0),
+									_0: _elm_lang$html$Html$text(_p17._0),
 									_1: {ctor: '[]'}
 								}),
 							_1: {ctor: '[]'}
@@ -10551,13 +10623,12 @@ var _ylixir$tagist$Main$requestGistsForAll = A2(
 	_ylixir$tagist$Main$AppendGists,
 	_ylixir$tagist$Main$getGists('https://api.github.com/gists'));
 var _ylixir$tagist$Main$requestGists = function (model) {
-	var users = _ylixir$tagist$Main$extractUsers(model.filters);
-	var _p12 = users;
-	if (_p12.ctor === '[]') {
+	var _p18 = _ylixir$tagist$Main$extractUsers(model.filters);
+	if (_p18.ctor === '[]') {
 		return _ylixir$tagist$Main$requestGistsForAll;
 	} else {
 		return _elm_lang$core$Platform_Cmd$batch(
-			A2(_elm_lang$core$List$map, _ylixir$tagist$Main$requestGistsForUser, users));
+			A2(_elm_lang$core$List$map, _ylixir$tagist$Main$requestGistsForUser, _p18));
 	}
 };
 var _ylixir$tagist$Main$init = function (location) {
@@ -10570,28 +10641,28 @@ var _ylixir$tagist$Main$init = function (location) {
 };
 var _ylixir$tagist$Main$update = F2(
 	function (msg, model) {
-		var _p13 = msg;
-		switch (_p13.ctor) {
+		var _p19 = msg;
+		switch (_p19.ctor) {
 			case 'UrlChange':
-				var newModel = _ylixir$tagist$Main$modelFromLocation(_p13._0);
+				var newModel = _ylixir$tagist$Main$modelFromLocation(_p19._0);
 				return {
 					ctor: '_Tuple2',
 					_0: newModel,
 					_1: _ylixir$tagist$Main$requestGists(newModel)
 				};
 			case 'AppendGists':
-				if (_p13._0.ctor === 'Err') {
+				if (_p19._0.ctor === 'Err') {
 					return A2(
 						_elm_lang$core$Platform_Cmd_ops['!'],
 						_elm_lang$core$Native_Utils.update(
 							model,
 							{
 								error: _elm_lang$core$Maybe$Just(
-									_elm_lang$core$Basics$toString(_p13._0._0))
+									_elm_lang$core$Basics$toString(_p19._0._0))
 							}),
 						{ctor: '[]'});
 				} else {
-					var _p14 = _p13._0._0;
+					var _p20 = _p19._0._0;
 					return A2(
 						_elm_lang$core$Platform_Cmd_ops['!'],
 						_elm_lang$core$Native_Utils.update(
@@ -10601,18 +10672,21 @@ var _ylixir$tagist$Main$update = F2(
 									_elm_lang$core$Basics_ops['++'],
 									model.gistInfo,
 									A2(
-										_elm_lang$core$Result$withDefault,
-										{ctor: '[]'},
+										_elm_lang$core$List$filterMap,
+										_ylixir$tagist$Main$filterGistByTree(model.filters),
 										A2(
-											_elm_lang$core$Json_Decode$decodeString,
-											_elm_lang$core$Json_Decode$list(_ylixir$tagist$Main$infoDecoder),
-											_p14.body))),
-								gistResponses: {ctor: '::', _0: _p14, _1: model.gistResponses}
+											_elm_lang$core$Result$withDefault,
+											{ctor: '[]'},
+											A2(
+												_elm_lang$core$Json_Decode$decodeString,
+												_elm_lang$core$Json_Decode$list(_ylixir$tagist$Main$infoDecoder),
+												_p20.body)))),
+								gistResponses: {ctor: '::', _0: _p20, _1: model.gistResponses}
 							}),
 						{ctor: '[]'});
 				}
 			case 'ReceiveFileContents':
-				if (_p13._1.ctor === 'Err') {
+				if (_p19._1.ctor === 'Err') {
 					return A2(
 						_elm_lang$core$Platform_Cmd_ops['!'],
 						_elm_lang$core$Native_Utils.update(
@@ -10622,9 +10696,9 @@ var _ylixir$tagist$Main$update = F2(
 									_elm_lang$core$List$map,
 									A2(
 										_ylixir$tagist$Main$updateGistWithFileData,
-										_p13._0,
+										_p19._0,
 										_ylixir$tagist$Main$Error(
-											_elm_lang$core$Basics$toString(_p13._1._0))),
+											_elm_lang$core$Basics$toString(_p19._1._0))),
 									model.gistInfo)
 							}),
 						{ctor: '[]'});
@@ -10638,14 +10712,14 @@ var _ylixir$tagist$Main$update = F2(
 									_elm_lang$core$List$map,
 									A2(
 										_ylixir$tagist$Main$updateGistWithFileData,
-										_p13._0,
-										_ylixir$tagist$Main$Loaded(_p13._1._0)),
+										_p19._0,
+										_ylixir$tagist$Main$Loaded(_p19._1._0)),
 									model.gistInfo)
 							}),
 						{ctor: '[]'});
 				}
 			case 'RequestFileContents':
-				var _p15 = _p13._0;
+				var _p21 = _p19._0;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
@@ -10653,13 +10727,13 @@ var _ylixir$tagist$Main$update = F2(
 						{
 							gistInfo: A2(
 								_elm_lang$core$List$map,
-								A2(_ylixir$tagist$Main$updateGistWithFileData, _p15, _ylixir$tagist$Main$Loading),
+								A2(_ylixir$tagist$Main$updateGistWithFileData, _p21, _ylixir$tagist$Main$Loading),
 								model.gistInfo)
 						}),
 					_1: A2(
 						_elm_lang$http$Http$send,
-						_ylixir$tagist$Main$ReceiveFileContents(_p15),
-						_elm_lang$http$Http$getString(_p13._1))
+						_ylixir$tagist$Main$ReceiveFileContents(_p21),
+						_elm_lang$http$Http$getString(_p19._1))
 				};
 			default:
 				return A2(
@@ -10669,7 +10743,7 @@ var _ylixir$tagist$Main$update = F2(
 						{
 							gistInfo: A2(
 								_elm_lang$core$List$map,
-								A2(_ylixir$tagist$Main$updateGistWithFileData, _p13._0, _ylixir$tagist$Main$Unloaded),
+								A2(_ylixir$tagist$Main$updateGistWithFileData, _p19._0, _ylixir$tagist$Main$Unloaded),
 								model.gistInfo)
 						}),
 					{ctor: '[]'});
@@ -10685,7 +10759,7 @@ var _ylixir$tagist$Main$main = A2(
 		init: _ylixir$tagist$Main$init,
 		view: _ylixir$tagist$Main$view,
 		update: _ylixir$tagist$Main$update,
-		subscriptions: function (_p16) {
+		subscriptions: function (_p22) {
 			return _elm_lang$core$Platform_Sub$none;
 		}
 	})();
