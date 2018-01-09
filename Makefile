@@ -9,7 +9,7 @@ clean:
 	@$(RM) *.js
 	@$(RM) -r elm-stuff
 
-all: Tagist.js index.html
+all: Tagist.js index.html default.css
 
 deploy: clean release
 	@echo Moving javascript to deployment branch
