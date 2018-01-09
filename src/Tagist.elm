@@ -1,7 +1,7 @@
 module Main exposing (..)
 
 import Html exposing (..)
-import Html.Attributes exposing (href)
+import Html.Attributes exposing (href, class, title)
 import Html.Events exposing (onClick)
 import Navigation
 import Set exposing (Set)
@@ -419,15 +419,15 @@ view model =
                ]
 
 
-fileLink : FileData -> Html msg
-fileLink f =
-    a [ href f.rawUrl ] [ text f.name ]
+fileLink : String -> FileData -> Html msg
+fileLink t f =
+    a [ href f.rawUrl, title f.name ] [ text t ]
 
 
 viewFile : String -> FileData -> Html Msg
 viewFile gistId file =
     let
-        knownLanguage action bullet =
+        expand action bullet =
             case file.language of
                 UnknownLanguage ->
                     span [] []
@@ -444,55 +444,57 @@ viewFile gistId file =
             FileCoordinates gistId file.name
                 |> RemoveFileContents
                 |> onClick
+
+        rawLink =
+            fileLink "raw"
     in
         div [] <|
             case ( file.contents, file.language ) of
                 ( Unloaded, UnknownLanguage ) ->
-                    [ span [] [ text "[ ]" ]
-                    , fileLink file
+                    [ span [] [ text file.name ]
+                    , rawLink file
                     ]
 
                 ( Unloaded, _ ) ->
-                    [ knownLanguage getContents "[+]"
-                    , fileLink file
+                    [ expand getContents <| "[ + " ++ file.name ++ " ]"
+                    , rawLink file
                     ]
 
                 ( Loading, _ ) ->
-                    [ knownLanguage getContents "[−]"
-                    , fileLink file
-                    , div [] [ text "Loading..." ]
+                    [ expand getContents <| "[ + " ++ file.name ++ " Loading ]"
+                    , rawLink file
                     ]
 
                 ( Loaded data, Markdown ) ->
-                    [ knownLanguage removeContents "[−]"
-                    , fileLink file
+                    [ expand removeContents <| "[ − " ++ file.name ++ " ]"
+                    , rawLink file
                     , div [] [ Markdown.toHtml [] data ]
                     ]
 
                 ( Loaded data, Text ) ->
-                    [ knownLanguage removeContents "[−]"
-                    , fileLink file
+                    [ expand removeContents <| "[ − " ++ file.name ++ " ]"
+                    , rawLink file
                     , div [] [ pre [] [ code [] [ text data ] ] ]
                     ]
 
                 ( Loaded data, _ ) ->
-                    [ knownLanguage removeContents "[−]"
-                    , fileLink file
+                    [ expand removeContents <| "[ − " ++ file.name ++ " ]"
+                    , rawLink file
                     , div [] [ text data ]
                     ]
 
                 ( Error message, _ ) ->
-                    [ knownLanguage getContents "[↻]"
-                    , fileLink file
+                    [ expand getContents <| "[ ↻ " ++ file.name ++ " ]"
+                    , rawLink file
                     , div [] [ text message ]
                     ]
 
 
 viewGist : GistSummary -> Html Msg
 viewGist gist =
-    div []
+    div [ class "comic--border" ]
         [ h2 [] [ text <| Maybe.withDefault "Untitled" gist.description ]
-        , h3 [] [ text <| Maybe.withDefault "Anonymous" gist.owner ]
+        , h3 [] [ text <| "—" ++ Maybe.withDefault "Anonymous" gist.owner ]
         , div [] <| List.map (viewFile gist.id) gist.files
         ]
 
