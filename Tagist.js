@@ -9976,20 +9976,25 @@ var _evancz$elm_markdown$Markdown$Options = F4(
 		return {githubFlavored: a, defaultHighlighting: b, sanitize: c, smartypants: d};
 	});
 
-var _ylixir$tagist$Main$fileLink = function (f) {
-	return A2(
-		_elm_lang$html$Html$a,
-		{
-			ctor: '::',
-			_0: _elm_lang$html$Html_Attributes$href(f.rawUrl),
-			_1: {ctor: '[]'}
-		},
-		{
-			ctor: '::',
-			_0: _elm_lang$html$Html$text(f.name),
-			_1: {ctor: '[]'}
-		});
-};
+var _ylixir$tagist$Main$fileLink = F2(
+	function (t, f) {
+		return A2(
+			_elm_lang$html$Html$a,
+			{
+				ctor: '::',
+				_0: _elm_lang$html$Html_Attributes$href(f.rawUrl),
+				_1: {
+					ctor: '::',
+					_0: _elm_lang$html$Html_Attributes$title(f.name),
+					_1: {ctor: '[]'}
+				}
+			},
+			{
+				ctor: '::',
+				_0: _elm_lang$html$Html$text(t),
+				_1: {ctor: '[]'}
+			});
+	});
 var _ylixir$tagist$Main$updateFileWithData = F3(
 	function (fileCoords, data, file) {
 		return _elm_lang$core$Native_Utils.eq(fileCoords.fileName, file.name) ? _elm_lang$core$Native_Utils.update(
@@ -10312,6 +10317,7 @@ var _ylixir$tagist$Main$RequestFileContents = F2(
 	});
 var _ylixir$tagist$Main$viewFile = F2(
 	function (gistId, file) {
+		var rawLink = _ylixir$tagist$Main$fileLink('raw');
 		var removeContents = _elm_lang$html$Html_Events$onClick(
 			_ylixir$tagist$Main$RemoveFileContents(
 				A2(_ylixir$tagist$Main$FileCoordinates, gistId, file.name)));
@@ -10320,7 +10326,7 @@ var _ylixir$tagist$Main$viewFile = F2(
 				_ylixir$tagist$Main$RequestFileContents,
 				A2(_ylixir$tagist$Main$FileCoordinates, gistId, file.name),
 				file.rawUrl));
-		var knownLanguage = F2(
+		var expand = F2(
 			function (action, bullet) {
 				var _p15 = file.language;
 				if (_p15.ctor === 'UnknownLanguage') {
@@ -10358,22 +10364,28 @@ var _ylixir$tagist$Main$viewFile = F2(
 									{ctor: '[]'},
 									{
 										ctor: '::',
-										_0: _elm_lang$html$Html$text('[ ]'),
+										_0: _elm_lang$html$Html$text(file.name),
 										_1: {ctor: '[]'}
 									}),
 								_1: {
 									ctor: '::',
-									_0: _ylixir$tagist$Main$fileLink(file),
+									_0: rawLink(file),
 									_1: {ctor: '[]'}
 								}
 							};
 						} else {
 							return {
 								ctor: '::',
-								_0: A2(knownLanguage, getContents, '[+]'),
+								_0: A2(
+									expand,
+									getContents,
+									A2(
+										_elm_lang$core$Basics_ops['++'],
+										'[ + ',
+										A2(_elm_lang$core$Basics_ops['++'], file.name, ' ]'))),
 								_1: {
 									ctor: '::',
-									_0: _ylixir$tagist$Main$fileLink(file),
+									_0: rawLink(file),
 									_1: {ctor: '[]'}
 								}
 							};
@@ -10381,22 +10393,17 @@ var _ylixir$tagist$Main$viewFile = F2(
 					case 'Loading':
 						return {
 							ctor: '::',
-							_0: A2(knownLanguage, getContents, '[−]'),
+							_0: A2(
+								expand,
+								getContents,
+								A2(
+									_elm_lang$core$Basics_ops['++'],
+									'[ + ',
+									A2(_elm_lang$core$Basics_ops['++'], file.name, ' Loading ]'))),
 							_1: {
 								ctor: '::',
-								_0: _ylixir$tagist$Main$fileLink(file),
-								_1: {
-									ctor: '::',
-									_0: A2(
-										_elm_lang$html$Html$div,
-										{ctor: '[]'},
-										{
-											ctor: '::',
-											_0: _elm_lang$html$Html$text('Loading...'),
-											_1: {ctor: '[]'}
-										}),
-									_1: {ctor: '[]'}
-								}
+								_0: rawLink(file),
+								_1: {ctor: '[]'}
 							}
 						};
 					case 'Loaded':
@@ -10404,10 +10411,16 @@ var _ylixir$tagist$Main$viewFile = F2(
 							case 'Markdown':
 								return {
 									ctor: '::',
-									_0: A2(knownLanguage, removeContents, '[−]'),
+									_0: A2(
+										expand,
+										removeContents,
+										A2(
+											_elm_lang$core$Basics_ops['++'],
+											'[ − ',
+											A2(_elm_lang$core$Basics_ops['++'], file.name, ' ]'))),
 									_1: {
 										ctor: '::',
-										_0: _ylixir$tagist$Main$fileLink(file),
+										_0: rawLink(file),
 										_1: {
 											ctor: '::',
 											_0: A2(
@@ -10428,10 +10441,16 @@ var _ylixir$tagist$Main$viewFile = F2(
 							case 'Text':
 								return {
 									ctor: '::',
-									_0: A2(knownLanguage, removeContents, '[−]'),
+									_0: A2(
+										expand,
+										removeContents,
+										A2(
+											_elm_lang$core$Basics_ops['++'],
+											'[ − ',
+											A2(_elm_lang$core$Basics_ops['++'], file.name, ' ]'))),
 									_1: {
 										ctor: '::',
-										_0: _ylixir$tagist$Main$fileLink(file),
+										_0: rawLink(file),
 										_1: {
 											ctor: '::',
 											_0: A2(
@@ -10463,10 +10482,16 @@ var _ylixir$tagist$Main$viewFile = F2(
 							default:
 								return {
 									ctor: '::',
-									_0: A2(knownLanguage, removeContents, '[−]'),
+									_0: A2(
+										expand,
+										removeContents,
+										A2(
+											_elm_lang$core$Basics_ops['++'],
+											'[ − ',
+											A2(_elm_lang$core$Basics_ops['++'], file.name, ' ]'))),
 									_1: {
 										ctor: '::',
-										_0: _ylixir$tagist$Main$fileLink(file),
+										_0: rawLink(file),
 										_1: {
 											ctor: '::',
 											_0: A2(
@@ -10485,10 +10510,16 @@ var _ylixir$tagist$Main$viewFile = F2(
 					default:
 						return {
 							ctor: '::',
-							_0: A2(knownLanguage, getContents, '[↻]'),
+							_0: A2(
+								expand,
+								getContents,
+								A2(
+									_elm_lang$core$Basics_ops['++'],
+									'[ ↻ ',
+									A2(_elm_lang$core$Basics_ops['++'], file.name, ' ]'))),
 							_1: {
 								ctor: '::',
-								_0: _ylixir$tagist$Main$fileLink(file),
+								_0: rawLink(file),
 								_1: {
 									ctor: '::',
 									_0: A2(
@@ -10509,7 +10540,11 @@ var _ylixir$tagist$Main$viewFile = F2(
 var _ylixir$tagist$Main$viewGist = function (gist) {
 	return A2(
 		_elm_lang$html$Html$div,
-		{ctor: '[]'},
+		{
+			ctor: '::',
+			_0: _elm_lang$html$Html_Attributes$class('comic--border'),
+			_1: {ctor: '[]'}
+		},
 		{
 			ctor: '::',
 			_0: A2(
@@ -10529,7 +10564,10 @@ var _ylixir$tagist$Main$viewGist = function (gist) {
 					{
 						ctor: '::',
 						_0: _elm_lang$html$Html$text(
-							A2(_elm_lang$core$Maybe$withDefault, 'Anonymous', gist.owner)),
+							A2(
+								_elm_lang$core$Basics_ops['++'],
+								'—',
+								A2(_elm_lang$core$Maybe$withDefault, 'Anonymous', gist.owner))),
 						_1: {ctor: '[]'}
 					}),
 				_1: {
