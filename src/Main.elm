@@ -1,5 +1,10 @@
 module Main exposing (..)
 
+{-| This is the entrypoint for the Tagist program
+@docs ComputerLanguage, FileContents, FileCoordinates, FileData, FileType
+@docs Filter, FilterTree, GistSummary, Model, Msg, categorizeFilters, extractUsers, fileDecoder, fileInfoDecoder, fileLink, fileTypeDecoder, filterGistByTags, filterGistByTree, getGists, infoDecoder, init, languageDecoder, main, modelFromLocation, parseAndValues, parseOrValues, removeEmptyLinks, requestGists, requestGistsForAll, requestGistsForUser, tagFilters, treeMaker, update, updateFileWithData, updateGistWithFileData, view, viewFile, viewGist, viewGists
+-}
+
 import Html exposing (..)
 import Html.Attributes exposing (href, class, title)
 import Html.Events exposing (onClick)
@@ -12,6 +17,9 @@ import Dict exposing (Dict)
 import Markdown
 
 
+{-| The entry point for tagist
+    elm-reactor Tagist.elm
+-}
 main : Program Never Model Msg
 main =
     Navigation.program UrlChange
@@ -27,16 +35,22 @@ main =
 --these are the models for the url/filters
 
 
+{-| blerg
+-}
 type Filter
     = User String
     | Tag String
 
 
+{-| blerg
+-}
 type FileType
     = PlainText
     | UnknownType
 
 
+{-| blerg
+-}
 type FilterTree
     = FilterTree
         { orFilters : List Filter
@@ -49,12 +63,16 @@ type FilterTree
 --these are the data structures for the gists themselves
 
 
+{-| blerg
+-}
 type ComputerLanguage
     = Markdown
     | Text
     | UnknownLanguage
 
 
+{-| blerg
+-}
 type FileContents
     = Unloaded
     | Loading
@@ -62,6 +80,8 @@ type FileContents
     | Error String
 
 
+{-| blerg
+-}
 type alias FileData =
     { name : String
     , rawUrl : String
@@ -71,6 +91,8 @@ type alias FileData =
     }
 
 
+{-| blerg
+-}
 type alias GistSummary =
     { id : String
     , owner : Maybe String
@@ -79,6 +101,8 @@ type alias GistSummary =
     }
 
 
+{-| blerg
+-}
 type alias Model =
     { error : Maybe String
     , gistResponses :
@@ -89,6 +113,8 @@ type alias Model =
     }
 
 
+{-| blerg
+-}
 fileTypeDecoder : String -> Decoder FileType
 fileTypeDecoder fileType =
     case fileType of
@@ -99,6 +125,8 @@ fileTypeDecoder fileType =
             decode UnknownType
 
 
+{-| blerg
+-}
 languageDecoder : String -> Decoder ComputerLanguage
 languageDecoder language =
     case language of
@@ -112,6 +140,8 @@ languageDecoder language =
             decode UnknownLanguage
 
 
+{-| blerg
+-}
 fileInfoDecoder : Decoder FileData
 fileInfoDecoder =
     decode FileData
@@ -122,11 +152,15 @@ fileInfoDecoder =
         |> hardcoded Unloaded
 
 
+{-| blerg
+-}
 fileDecoder : Decoder (List FileData)
 fileDecoder =
     (dict <| fileInfoDecoder) |> Json.Decode.andThen (\dict -> decode (Dict.values dict))
 
 
+{-| blerg
+-}
 infoDecoder : Decoder GistSummary
 infoDecoder =
     decode GistSummary
@@ -136,6 +170,8 @@ infoDecoder =
         |> required "files" fileDecoder
 
 
+{-| blerg
+-}
 categorizeFilters : String -> Maybe Filter
 categorizeFilters filter =
     case String.uncons filter of
@@ -152,21 +188,29 @@ categorizeFilters filter =
             Nothing
 
 
+{-| blerg
+-}
 parseOrValues : String -> List Filter
 parseOrValues filter =
     List.filterMap categorizeFilters (String.split "," filter)
 
 
+{-| blerg
+-}
 treeMaker : String -> FilterTree -> FilterTree
 treeMaker filter tree =
     FilterTree { orFilters = (parseOrValues filter), andFilters = tree }
 
 
+{-| blerg
+-}
 parseAndValues : String -> FilterTree
 parseAndValues filter =
     List.foldr treeMaker EmptyFilterTree (String.split "/" filter)
 
 
+{-| blerg
+-}
 extractUsers : FilterTree -> List String
 extractUsers filterTree =
     case filterTree of
@@ -197,6 +241,8 @@ extractUsers filterTree =
 -}
 
 
+{-| blerg
+-}
 removeEmptyLinks : FilterTree -> FilterTree
 removeEmptyLinks filterTree =
     case filterTree of
@@ -217,6 +263,8 @@ removeEmptyLinks filterTree =
             EmptyFilterTree
 
 
+{-| blerg
+-}
 tagFilters : List Filter -> List String
 tagFilters =
     List.foldl
@@ -231,6 +279,8 @@ tagFilters =
         []
 
 
+{-| blerg
+-}
 filterGistByTags : List Filter -> Maybe GistSummary -> Maybe GistSummary
 filterGistByTags orFilters gist =
     case ( tagFilters orFilters, gist ) of
@@ -264,6 +314,8 @@ filterGistByTags orFilters gist =
                     Nothing
 
 
+{-| blerg
+-}
 filterGistByTree : FilterTree -> GistSummary -> Maybe GistSummary
 filterGistByTree tree gist =
     case tree of
@@ -274,6 +326,8 @@ filterGistByTree tree gist =
             filterGistByTags tree.orFilters (filterGistByTree tree.andFilters gist)
 
 
+{-| blerg
+-}
 modelFromLocation : Navigation.Location -> Model
 modelFromLocation location =
     location.hash
@@ -282,6 +336,8 @@ modelFromLocation location =
         |> Model Nothing [] []
 
 
+{-| blerg
+-}
 init : Navigation.Location -> ( Model, Cmd Msg )
 init location =
     let
@@ -297,12 +353,16 @@ init location =
 -- UPDATE
 
 
+{-| blerg
+-}
 type alias FileCoordinates =
     { gistId : String
     , fileName : String
     }
 
 
+{-| blerg
+-}
 type Msg
     = UrlChange Navigation.Location
     | AppendGists (Result Http.Error (Http.Response String))
@@ -311,6 +371,8 @@ type Msg
     | RemoveFileContents FileCoordinates
 
 
+{-| blerg
+-}
 getGists : String -> Http.Request (Http.Response String)
 getGists url =
     Http.request
@@ -324,16 +386,22 @@ getGists url =
         }
 
 
+{-| blerg
+-}
 requestGistsForUser : String -> Cmd Msg
 requestGistsForUser user =
     Http.send AppendGists (getGists ("https://api.github.com/users/" ++ user ++ "/gists"))
 
 
+{-| blerg
+-}
 requestGistsForAll : Cmd Msg
 requestGistsForAll =
     Http.send AppendGists (getGists "https://api.github.com/gists")
 
 
+{-| blerg
+-}
 requestGists : Model -> Cmd Msg
 requestGists model =
     case (extractUsers model.filters) of
@@ -346,6 +414,8 @@ requestGists model =
                 |> Cmd.batch
 
 
+{-| blerg
+-}
 updateFileWithData : FileCoordinates -> FileContents -> FileData -> FileData
 updateFileWithData fileCoords data file =
     if fileCoords.fileName == file.name then
@@ -354,6 +424,8 @@ updateFileWithData fileCoords data file =
         file
 
 
+{-| blerg
+-}
 updateGistWithFileData : FileCoordinates -> FileContents -> GistSummary -> GistSummary
 updateGistWithFileData fileCoords data gist =
     if fileCoords.gistId == gist.id then
@@ -362,6 +434,8 @@ updateGistWithFileData fileCoords data gist =
         gist
 
 
+{-| blerg
+-}
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -402,6 +476,8 @@ update msg model =
 -- VIEW
 
 
+{-| blerg
+-}
 view : Model -> Html Msg
 view model =
     div [] <|
@@ -419,11 +495,15 @@ view model =
                ]
 
 
+{-| blerg
+-}
 fileLink : String -> FileData -> Html msg
 fileLink t f =
     a [ href f.rawUrl, title f.name ] [ text t ]
 
 
+{-| blerg
+-}
 viewFile : String -> FileData -> Html Msg
 viewFile gistId file =
     let
@@ -490,6 +570,8 @@ viewFile gistId file =
                     ]
 
 
+{-| blerg
+-}
 viewGist : GistSummary -> Html Msg
 viewGist gist =
     div [ class "comic--border" ]
@@ -499,6 +581,8 @@ viewGist gist =
         ]
 
 
+{-| blerg
+-}
 viewGists : List GistSummary -> Html Msg
 viewGists gists =
     div [] <| List.map viewGist gists

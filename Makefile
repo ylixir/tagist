@@ -1,15 +1,24 @@
-debug: EM = elm-make --debug
-debug: all
+debug: EMFLAGS = --debug
+release: EMFLAGS = --yes
 
-release: EM = elm-make --yes
+SOURCES = src/*.elm
+EM = elm-make $(EMFLAGS)
+
+debug: web
+
 release: all
+
+docs: docs.json
+
+web: Tagist.js index.html default.css
 
 clean:
 	@echo Cleaning javascript files and elm-stuff
 	@$(RM) *.js
 	@$(RM) -r elm-stuff
+	@$(RM) docs.json
 
-all: Tagist.js index.html default.css
+all: web docs
 
 deploy: clean release
 	@echo Moving javascript to deployment branch
@@ -24,6 +33,8 @@ deploy: clean release
 	@echo Restroing mast branch
 	@git checkout master
 
-Tagist.js: src/Tagist.elm
+Tagist.js: $(SOURCES)
 	$(EM) $< --output=$@
 
+docs.json: $(SOURCES)
+	$(EM) --docs=$@
