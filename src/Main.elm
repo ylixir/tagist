@@ -35,21 +35,23 @@ main =
 --these are the models for the url/filters
 
 
-{-| blerg
+{-| We can filter either by users, or strings (aka "tags")
 -}
 type Filter
     = User String
     | Tag String
 
 
-{-| blerg
+{-| currently we only manage text files, no binaries
 -}
 type FileType
     = PlainText
     | UnknownType
 
 
-{-| blerg
+{-| the filters are arranged in a tree of lists. each list is an "or" filter,
+so anything in the list matches our results. anthing not in the list doesn't
+match. that's the "and" part.
 -}
 type FilterTree
     = FilterTree
@@ -63,7 +65,7 @@ type FilterTree
 --these are the data structures for the gists themselves
 
 
-{-| blerg
+{-| the plain text we know how to handle includes markdown and actual plain text
 -}
 type ComputerLanguage
     = Markdown
@@ -71,7 +73,7 @@ type ComputerLanguage
     | UnknownLanguage
 
 
-{-| blerg
+{-| hopefully these are pretty self explanatory statuses for the file states
 -}
 type FileContents
     = Unloaded
@@ -80,7 +82,7 @@ type FileContents
     | Error String
 
 
-{-| blerg
+{-| this is the metadata for a file (and the contents)
 -}
 type alias FileData =
     { name : String
@@ -91,7 +93,7 @@ type alias FileData =
     }
 
 
-{-| blerg
+{-| the relevant information for a given gist
 -}
 type alias GistSummary =
     { id : String
@@ -101,7 +103,8 @@ type alias GistSummary =
     }
 
 
-{-| blerg
+{-| the main datastructure consists of an optional error string, a list of gist
+data, and the filters. it also includes git responses for debugging purposes.
 -}
 type alias Model =
     { error : Maybe String
