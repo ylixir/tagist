@@ -1,3 +1,6 @@
+# archived
+i've decided that a regular old github repo with jekyll things makes a far simpler platform for blogging, and it's not something i have to spend as much work maintaining
+
 # tagist
 Made for bloging, but meant to be flexible beyond this
 
